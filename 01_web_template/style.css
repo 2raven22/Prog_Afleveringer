@@ -4,7 +4,7 @@
     box-sizing: border-box;
 }
 
-.page{
+.page, #helpText{
     position:fixed;
     top:0;
     left:-100vw;
@@ -15,6 +15,11 @@
     place-items:center;
     transition: 0.3s 0.3s all ease-in-out;
     padding: 15rem;
+}
+
+#helpText{
+    left: 0;
+    z-index: 1; 
 }
 
 canvas{
@@ -30,6 +35,20 @@ button{
     font-size: 4rem;
 }
 
+.riddleButton{
+    border-radius: 1rem;
+    width: 20rem;
+    height: 10 rem;
+    transition: .5s all ease-in-out;
+}
+
+.riddleButton.correct{
+    border: 10 px solid white;
+}
+
+.riddleButton.error{
+    border: 10 px solid red;
+}
 .visible{
     left:0;
     transition: 0.3s all ease-in-out;
@@ -61,4 +80,9 @@ h1{
 
 #time{
     font-size: 5rem;
+}
+
+#hint{
+    font-size: 3rem;
+    color: white;
 }
