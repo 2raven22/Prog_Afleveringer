@@ -124,15 +124,24 @@ const player2 = new Player(400, 350, "green", {
 const enemies = [];
 
 function spawnEnemy() {
-    // Vælger en tilfældig position udenfor canvas (f.eks. til højre for canvas)
-    const spawnX = canvas.width + Math.random() * 100; // Udenfor højre kant
+    // Vælger en tilfældig position for spawn udenfor canvaset
+    const spawnSide = Math.random() < 0.5 ? 'left' : 'right'; // Vælger om fjenden spawn'er til venstre eller højre
     const spawnY = Math.random() * canvas.height; // Tilfældigt Y-position på canvaset
+    let spawnX;
+
+    // Spawner på venstre eller højre side af canvas
+    if (spawnSide === 'left') {
+        spawnX = -20; // Starter lige udenfor venstre kant
+    } else {
+        spawnX = canvas.width + 20; // Starter lige udenfor højre kant
+    }
+
     const enemy = new Enemy(spawnX, spawnY, "red", 1); // Opretter en ny fjende
     enemies.push(enemy); // Lægger fjenden til i enemies array
 }
 
-// Spawn en fjende hver 2. sekund
-setInterval(spawnEnemy, 2000);
+// Spawn en fjende hver 4. sekund (langsommere end før)
+setInterval(spawnEnemy, 4000);
 
 // Game loop funktion, der kører hver frame
 function gameLoop() {
