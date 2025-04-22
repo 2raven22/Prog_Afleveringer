@@ -8,6 +8,7 @@ class Player {
         this.height = 20;
         this.controls = controls;
         this.bullets = [];
+        this.facingDirection = "up"; // Standard retning som vi bruger til at skyde den retning man vender
     }
 
     draw(ctx) {
@@ -17,40 +18,69 @@ class Player {
     }
 
     move(keys) {
-        if (keys[this.controls.up]) this.y -= 3;
-        if (keys[this.controls.down]) this.y += 3;
-        if (keys[this.controls.left]) this.x -= 3;
-        if (keys[this.controls.right]) this.x += 3;
+        const speed = 3;
+        if (keys[this.controls.up] && this.y - speed >= 0) {
+            this.y -= speed;
+            this.facingDirection = "up";
+        }
+        if (keys[this.controls.down] && this.y + this.height + speed <= canvas.height) {
+            this.y += speed;
+            this.facingDirection = "down";
+        }
+        if (keys[this.controls.left] && this.x - speed >= 0) {
+            this.x -= speed;
+            this.facingDirection = "left";
+        }
+        if (keys[this.controls.right] && this.x + this.width + speed <= canvas.width) {
+            this.x += speed;
+            this.facingDirection = "right";
+        }
     }
+            
 
-    shoot() {
-        this.bullets.push(new Bullet(this.x + 10, this.y - 5, -5, this.color));
+   shoot(){
+        let dx = 0;
+        let dy = 0;
+        
+        switch (this.facingDirection) {
+            case "up": dy = -5; break;
+            case "down": dy = 5; break;
+            case "left": dx = -5; break;
+            case "right": dx = 5; break;
+        }
+        
+        this.bullets.push(new Bullet(this.x + this.width / 2, this.y + this.height / 2, dx, dy, this.color));
     }
-
     updateBullets() {
         this.bullets.forEach(b => b.update());
-        this.bullets = this.bullets.filter(b => b.y > 0);
-    }
+        this.bullets = this.bullets.filter(b =>
+            b.x > 0 && b.x < canvas.width && b.y > 0 && b.y < canvas.height);
+    } 
 }
 
 // Klasse, der repræsenterer en kugle
 class Bullet {
-    constructor(x, y, speed, color) {
+    constructor(x, y, dx, dy, color) {
         this.x = x;
         this.y = y;
-        this.speed = speed;
+        this.dx = dx;
+        this.dy = dy;
         this.color = color;
+        this.width = 4;
+        this.height = 10;
     }
 
     update() {
-        this.y += this.speed;
+        this.x += this.dx;
+        this.y += this.dy;
     }
 
     draw(ctx) {
         ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, 4, 10);
+        ctx.fillRect(this.x, this.y, this.width, this.height);
     }
 }
+
 
 // Klasse, der repræsenterer en fjende
 class Enemy {
@@ -140,8 +170,41 @@ function spawnEnemy() {
     enemies.push(enemy); // Lægger fjenden til i enemies array
 }
 
-// Spawn en fjende hver 4. sekund (langsommere end før)
-setInterval(spawnEnemy, 4000);
+let spawnInterval = 4000; // Startinterval
+let minimumInterval = 1000;
+let intervalReducer = 250;
+
+let enemySpeed = 1; // Start-hastighed
+
+function spawnEnemy() {
+    const spawnSide = Math.random() < 0.5 ? 'left' : 'right';
+    const spawnY = Math.random() * canvas.height;
+    let spawnX = spawnSide === 'left' ? -20 : canvas.width + 20;
+
+    const enemy = new Enemy(spawnX, spawnY, "red", enemySpeed); // Brug den aktuelle hastighed
+    enemies.push(enemy);
+}
+
+function startEnemySpawner() {
+    setTimeout(function spawn() {
+        spawnEnemy();
+
+        // Reducer interval, men ikke under minimum
+        spawnInterval = Math.max(minimumInterval, spawnInterval - intervalReducer);
+
+        setTimeout(spawn, spawnInterval);
+    }, spawnInterval);
+}
+
+function isColliding(rect1, rect2) {
+    return (
+        rect1.x < rect2.x + rect2.width &&
+        rect1.x + rect1.width > rect2.x &&
+        rect1.y < rect2.y + rect2.height &&
+        rect1.y + rect1.height > rect2.y
+    );
+}
+
 
 // Game loop funktion, der kører hver frame
 function gameLoop() {
@@ -159,8 +222,41 @@ function gameLoop() {
         enemy.update(player1, player2); // Fjenden følger den tætteste spiller
         enemy.draw(ctx); // Tegner fjenden
     });
+// Opdaterer og tegner alle fjender
+enemies.forEach(enemy => {
+    enemy.update(player1, player2);
+    enemy.draw(ctx);
+});
+
+// Tjek for kollisioner mellem kugler og fjender
+enemies.forEach((enemy, enemyIndex) => {
+    [player1, player2].forEach(player => {
+        player.bullets.forEach((bullet, bulletIndex) => {
+            const bulletRect = {
+                x: bullet.x,
+                y: bullet.y,
+                width: 4,
+                height: 10
+            };
+
+            const enemyRect = {
+                x: enemy.x,
+                y: enemy.y,
+                width: enemy.width,
+                height: enemy.height
+            };
+
+            if (isColliding(bulletRect, enemyRect)) {
+                // Fjern fjende og kugle
+                enemies.splice(enemyIndex, 1);
+                player.bullets.splice(bulletIndex, 1);
+            }
+        });
+    });
+});
 
     requestAnimationFrame(gameLoop); // Kører game loop igen
 }
 
 gameLoop(); // Starter game loop'en
+startEnemySpawner(); //starter enemy spawners tid
