@@ -1,19 +1,19 @@
 // Klasse, der repræsenterer en spiller
 class Player {
-    constructor(x, y, color, controls) {
+    constructor(x, y, imgSrc, controls) {
         this.x = x;
         this.y = y;
-        this.color = color;
-        this.width = 20;
-        this.height = 20;
+        this.width = 40;
+        this.height = 40;
         this.controls = controls;
         this.bullets = [];
-        this.facingDirection = "up"; // Standard retning som vi bruger til at skyde den retning man vender
+
+        this.image = new Image();
+        this.image.src = imgSrc;
     }
 
     draw(ctx) {
-        ctx.fillStyle = this.color;
-        ctx.fillRect(this.x, this.y, this.width, this.height);
+        ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
         this.bullets.forEach(b => b.draw(ctx));
     }
 
@@ -65,7 +65,7 @@ class Bullet {
         this.y = y;
         this.dx = dx;
         this.dy = dy;
-        this.color = color;
+        this.color = "blue" ;
         this.width = 4;
         this.height = 10;
     }
@@ -131,6 +131,7 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 let keys = {};
+let score = 0;
 
 document.addEventListener("keydown", e => {
     keys[e.key] = true; // Retter fra e.keys til e.key
@@ -142,11 +143,11 @@ document.addEventListener("keyup", e => {
 });
 
 // Opretter to spillere
-const player1 = new Player(100, 350, "blue", {
+const player1 = new Player(100, 350, "assets/ak.png", {
     up: "w", down: "s", left: "a", right: "d"
-});
+}, );
 
-const player2 = new Player(400, 350, "green", {
+const player2 = new Player(400, 350, "assets/ak.png", {
     up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight"
 });
 
@@ -210,6 +211,10 @@ function isColliding(rect1, rect2) {
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Rydder canvaset
 
+    ctx.fillStyle = "white";
+    ctx.font = "20px Arial";
+    ctx.fillText("Score: " + score, 20, 30);
+
     // Opdaterer og tegner spillere
     [player1, player2].forEach(p => {
         p.move(keys);
@@ -222,11 +227,7 @@ function gameLoop() {
         enemy.update(player1, player2); // Fjenden følger den tætteste spiller
         enemy.draw(ctx); // Tegner fjenden
     });
-// Opdaterer og tegner alle fjender
-enemies.forEach(enemy => {
-    enemy.update(player1, player2);
-    enemy.draw(ctx);
-});
+
 
 // Tjek for kollisioner mellem kugler og fjender
 enemies.forEach((enemy, enemyIndex) => {
@@ -250,6 +251,7 @@ enemies.forEach((enemy, enemyIndex) => {
                 // Fjern fjende og kugle
                 enemies.splice(enemyIndex, 1);
                 player.bullets.splice(bulletIndex, 1);
+                score += 15; 
             }
         });
     });
@@ -257,6 +259,11 @@ enemies.forEach((enemy, enemyIndex) => {
 
     requestAnimationFrame(gameLoop); // Kører game loop igen
 }
+player1.image.onload = () => {
+    player2.image.onload = () => {
+        gameLoop(); // Starter game loop'en
+        startEnemySpawner(); //starter enemy spawners tid
+    };
+};
 
-gameLoop(); // Starter game loop'en
-startEnemySpawner(); //starter enemy spawners tid
+
