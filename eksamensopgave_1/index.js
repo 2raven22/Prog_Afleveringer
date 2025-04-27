@@ -7,17 +7,24 @@ class Player {
         this.height = 40;
         this.controls = controls;
         this.bullets = [];
+        this.lives = 3; 
+        this.hitCooldown = 0;
+        this.isDead = false
 
         this.image = new Image();
         this.image.src = imgSrc;
     }
 
     draw(ctx) {
+        if (this.isDead) return;
+
         ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
         this.bullets.forEach(b => b.draw(ctx));
     }
 
     move(keys) {
+        if (this.isDead) return;
+
         const speed = 3;
         if (keys[this.controls.up] && this.y - speed >= 0) {
             this.y -= speed;
@@ -36,7 +43,27 @@ class Player {
             this.facingDirection = "right";
         }
     }
-            
+
+    loseLife() {
+        if (this.hitCooldown === 0 && !this.isDead) {
+            this.lives--;
+            this.hitCooldown = 60; // 60 frames cooldown (kan justeres)
+            if (this.lives <= 0) {
+                // Spilleren er død, håndter spillets afslutning her
+                this.isDead = true; // Sæt spilleren som død
+                return true;  // Angiver at spilleren er død
+            }
+        }
+        return false;
+    }
+
+    // Opdaterer cooldown for at kunne tage et nyt hit
+    updateCooldown() {
+        if (this.hitCooldown > 0) {
+            this.hitCooldown--;
+        }
+    }
+
 
    shoot(){
         let dx = 0;
@@ -123,6 +150,21 @@ class Enemy {
         // Bevæger fjenden i retningen af den tætteste spiller
         this.x += dx * this.speed;
         this.y += dy * this.speed;
+
+    // Tjek for kollision med spilleren
+    if (isColliding(this, player1)) {
+        if (player1.loseLife()) {
+        // Hvis spiller1 dør
+        alert("Spiller 1 er død!");
+    }
+}
+
+if (isColliding(this, player2)) {
+    if (player2.loseLife()) {
+        // Hvis spiller2 dør
+        alert("Spiller 2 er død!");
+            }
+        }
     }
 }
 
@@ -211,16 +253,30 @@ function isColliding(rect1, rect2) {
 function gameLoop() {
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Rydder canvaset
 
-    ctx.fillStyle = "white";
-    ctx.font = "20px Arial";
-    ctx.fillText("Score: " + score, 20, 30);
+    // Hvis begge spillere er døde, afslut spillet
+    if (player1.lives <= 0 && player2.lives <= 0) {
+        ctx.fillStyle = "red";
+        ctx.font = "30px Arial";
+        ctx.fillText("Game Over!", canvas.width / 2 - 100, canvas.height / 2);
+        return; // Stopper spillet
+    }
 
-    // Opdaterer og tegner spillere
+    ctx.fillStyle = "white"
+    ctx.fillText("Score: " + score, 600, 20);
+
+    // Tegner spillere og opdaterer deres tilstand
     [player1, player2].forEach(p => {
         p.move(keys);
         p.updateBullets();
         p.draw(ctx);
+        p.updateCooldown(); // Opdaterer cooldown for spilleren
     });
+
+    // Tegn livene på et fast sted for begge spillere
+    ctx.fillStyle = "white";
+    ctx.font = "20px Arial";
+    ctx.fillText("Player 1 Lives: " + player1.lives, 30, 30);
+    ctx.fillText("Player 2 Lives: " + player2.lives, canvas.width - 180, 30);
 
     // Opdaterer og tegner alle fjender
     enemies.forEach(enemy => {
@@ -228,42 +284,41 @@ function gameLoop() {
         enemy.draw(ctx); // Tegner fjenden
     });
 
+    // Tjek for kollisioner mellem kugler og fjender
+    enemies.forEach((enemy, enemyIndex) => {
+        [player1, player2].forEach(player => {
+            player.bullets.forEach((bullet, bulletIndex) => {
+                const bulletRect = {
+                    x: bullet.x,
+                    y: bullet.y,
+                    width: 4,
+                    height: 10
+                };
 
-// Tjek for kollisioner mellem kugler og fjender
-enemies.forEach((enemy, enemyIndex) => {
-    [player1, player2].forEach(player => {
-        player.bullets.forEach((bullet, bulletIndex) => {
-            const bulletRect = {
-                x: bullet.x,
-                y: bullet.y,
-                width: 4,
-                height: 10
-            };
+                const enemyRect = {
+                    x: enemy.x,
+                    y: enemy.y,
+                    width: enemy.width,
+                    height: enemy.height
+                };
 
-            const enemyRect = {
-                x: enemy.x,
-                y: enemy.y,
-                width: enemy.width,
-                height: enemy.height
-            };
-
-            if (isColliding(bulletRect, enemyRect)) {
-                // Fjern fjende og kugle
-                enemies.splice(enemyIndex, 1);
-                player.bullets.splice(bulletIndex, 1);
-                score += 15; 
-            }
+                if (isColliding(bulletRect, enemyRect)) {
+                    // Fjern fjende og kugle
+                    enemies.splice(enemyIndex, 1);
+                    player.bullets.splice(bulletIndex, 1);
+                    score += 15; 
+                }
+            });
         });
     });
-});
 
     requestAnimationFrame(gameLoop); // Kører game loop igen
 }
+
+// Start game loop'en og spawner fjender
 player1.image.onload = () => {
     player2.image.onload = () => {
         gameLoop(); // Starter game loop'en
         startEnemySpawner(); //starter enemy spawners tid
     };
 };
-
-
