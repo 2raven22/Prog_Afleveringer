@@ -1,31 +1,33 @@
 // Klasse, der repræsenterer en spiller
 class Player {
     constructor(x, y, imgSrc, controls) {
-        this.x = x;
-        this.y = y;
-        this.width = 40;
-        this.height = 40;
-        this.controls = controls;
-        this.bullets = [];
-        this.lives = 3; 
-        this.hitCooldown = 0;
-        this.isDead = false
+        this.x = x; // Spillerens x-position
+        this.y = y; // Spillerens y-position
+        this.width = 40; // Bredde på spilleren
+        this.height = 40; // Højde på spilleren
+        this.controls = controls; // Hvilke taster spilleren bruger
+        this.bullets = []; // Liste over skud affyret af spilleren
+        this.lives = 3; // Start-liv
+        this.hitCooldown = 0; // Tidsperiode hvor spilleren ikke kan tage skade igen
+        this.isDead = false; // Om spilleren er død
 
-        this.image = new Image();
-        this.image.src = imgSrc;
+        this.image = new Image(); // Opretter billede
+        this.image.src = imgSrc; // Indlæser billede fra fil
     }
 
+    // Tegner spilleren og deres skud
     draw(ctx) {
-        if (this.isDead) return;
-
-        ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
-        this.bullets.forEach(b => b.draw(ctx));
+        if (this.isDead) return; // Tegner ikke hvis spilleren er død
+        ctx.drawImage(this.image, this.x, this.y, this.width, this.height); // Tegner spillerens billede
+        this.bullets.forEach(b => b.draw(ctx)); // Tegner alle spillerens skud
     }
 
+    // Behandler bevægelse baseret på tastetryk
     move(keys) {
-        if (this.isDead) return;
+        if (this.isDead) return; // Døde spillere bevæger sig ikke
+        const speed = 3; // Hastighed
 
-        const speed = 3;
+        // Flytter op/ned/venstre/højre afhængigt af tast
         if (keys[this.controls.up] && this.y - speed >= 0) {
             this.y -= speed;
             this.facingDirection = "up";
@@ -44,72 +46,77 @@ class Player {
         }
     }
 
+    // Spilleren mister et liv
     loseLife() {
         if (this.hitCooldown === 0 && !this.isDead) {
             this.lives--;
-            this.hitCooldown = 60; // 60 frames cooldown (kan justeres)
+            this.hitCooldown = 60; // Sætter en cooldown på 60 frames
             if (this.lives <= 0) {
-                // Spilleren er død, håndter spillets afslutning her
-                this.isDead = true; // Sæt spilleren som død
-                return true;  // Angiver at spilleren er død
+                this.isDead = true; // Spilleren er nu død
+                return true;
             }
         }
         return false;
     }
 
-    // Opdaterer cooldown for at kunne tage et nyt hit
+    // Opdaterer cooldown, så spilleren igen kan tage skade
     updateCooldown() {
         if (this.hitCooldown > 0) {
             this.hitCooldown--;
         }
     }
 
-
-   shoot(){
+    // Spilleren skyder et skud
+    shoot() {
         let dx = 0;
         let dy = 0;
-        
+
+        // Bestem retningen kuglen skal flyve i
         switch (this.facingDirection) {
             case "up": dy = -5; break;
             case "down": dy = 5; break;
             case "left": dx = -5; break;
             case "right": dx = 5; break;
         }
-        
+
+        // Tilføj kuglen til listen af bullets
         this.bullets.push(new Bullet(this.x + this.width / 2, this.y + this.height / 2, dx, dy, this.color));
     }
+
+    // Opdaterer kuglerne (bevægelse og fjerner dem hvis de er udenfor skærmen)
     updateBullets() {
         this.bullets.forEach(b => b.update());
         this.bullets = this.bullets.filter(b =>
             b.x > 0 && b.x < canvas.width && b.y > 0 && b.y < canvas.height);
-    } 
+    }
 }
 
-// Klasse, der repræsenterer en kugle
+// Klasse til kugler, som spillerne skyder
 class Bullet {
     constructor(x, y, dx, dy, color) {
         this.x = x;
         this.y = y;
-        this.dx = dx;
-        this.dy = dy;
-        this.color = "blue" ;
+        this.dx = dx; // X-retning
+        this.dy = dy; // Y-retning
+        this.color = "blue"; // Kuglens farve
         this.width = 4;
         this.height = 10;
     }
 
+    // Opdaterer position
     update() {
         this.x += this.dx;
         this.y += this.dy;
     }
 
+    // Tegner kuglen
     draw(ctx) {
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y, this.width, this.height);
     }
 }
 
-
-// Klasse, der repræsenterer en fjende
+// Klasse til fjender
 class Enemy {
     constructor(x, y, color, speed) {
         this.x = x;
@@ -117,7 +124,7 @@ class Enemy {
         this.color = color;
         this.width = 20;
         this.height = 20;
-        this.speed = speed;
+        this.speed = speed; // Hvor hurtigt fjenden bevæger sig
     }
 
     draw(ctx) {
@@ -125,60 +132,62 @@ class Enemy {
         ctx.fillRect(this.x, this.y, this.width, this.height);
     }
 
+    // Fjenden jagter nærmeste spiller
     update(player1, player2) {
-        // Beregn afstanden til begge spillere
-        let dx1 = player1.x - this.x;
-        let dy1 = player1.y - this.y;
-        let distance1 = Math.sqrt(dx1 * dx1 + dy1 * dy1);
+        const alivePlayers = [player1, player2].filter(p => !p.isDead); // Kun levende spillere
 
-        let dx2 = player2.x - this.x;
-        let dy2 = player2.y - this.y;
-        let distance2 = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+        if (alivePlayers.length === 0) return; // Stop hvis ingen spillere er i live
 
-        // Hvis spiller 1 er tættere, følg spiller 1, ellers følg spiller 2
-        let targetPlayer = distance1 < distance2 ? player1 : player2;
+        // Find nærmeste spiller
+        let closestPlayer = alivePlayers[0];
+        let closestDistance = this.getDistanceTo(closestPlayer);
+        for (let i = 1; i < alivePlayers.length; i++) {
+            const distance = this.getDistanceTo(alivePlayers[i]);
+            if (distance < closestDistance) {
+                closestPlayer = alivePlayers[i];
+                closestDistance = distance;
+            }
+        }
 
-        // Beregn forskellen i position og normaliser vektoren
-        let dx = targetPlayer.x - this.x;
-        let dy = targetPlayer.y - this.y;
-
-        let distance = Math.sqrt(dx * dx + dy * dy);
-
+        // Bevæg dig mod spilleren
+        let dx = closestPlayer.x - this.x;
+        let dy = closestPlayer.y - this.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
         dx /= distance;
         dy /= distance;
 
-        // Bevæger fjenden i retningen af den tætteste spiller
         this.x += dx * this.speed;
         this.y += dy * this.speed;
 
-    // Tjek for kollision med spilleren
-    if (isColliding(this, player1)) {
-        if (player1.loseLife()) {
-        // Hvis spiller1 dør
-        alert("Spiller 1 er død!");
-    }
-}
-
-if (isColliding(this, player2)) {
-    if (player2.loseLife()) {
-        // Hvis spiller2 dør
-        alert("Spiller 2 er død!");
-            }
+        // Hvis fjenden rammer en spiller
+        if (!player1.isDead && isColliding(this, player1)) {
+            player1.loseLife();
+        }
+        if (!player2.isDead && isColliding(this, player2)) {
+            player2.loseLife();
         }
     }
+
+    // Beregner afstanden til en spiller
+    getDistanceTo(player) {
+        const dx = player.x - this.x;
+        const dy = player.y - this.y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
 }
 
-// Henter canvas-elementet og opsætter tegnekonteksten
+// Henter canvas og sætter op
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-let keys = {};
-let score = 0;
+let keys = {}; // Taster der bliver holdt nede
+let score = 0; // Spillets score
 
+// Registrerer tastetryk
 document.addEventListener("keydown", e => {
-    keys[e.key] = true; // Retter fra e.keys til e.key
-    if (e.key === ' ') player1.shoot();
-    if (e.key === 'Enter') player2.shoot();
+    keys[e.key] = true;
+    if (e.key === ' ') player1.shoot(); // Player1 skyder med mellemrum
+    if (e.key === 'Enter') player2.shoot(); // Player2 skyder med enter
 });
 document.addEventListener("keyup", e => {
     keys[e.key] = false;
@@ -187,58 +196,16 @@ document.addEventListener("keyup", e => {
 // Opretter to spillere
 const player1 = new Player(100, 350, "assets/ak.png", {
     up: "w", down: "s", left: "a", right: "d"
-}, );
+});
 
 const player2 = new Player(400, 350, "assets/ak.png", {
     up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight"
 });
 
-// Fjende spawner
+// Fjenderne bliver gemt i denne liste
 const enemies = [];
 
-function spawnEnemy() {
-    // Vælger en tilfældig position for spawn udenfor canvaset
-    const spawnSide = Math.random() < 0.5 ? 'left' : 'right'; // Vælger om fjenden spawn'er til venstre eller højre
-    const spawnY = Math.random() * canvas.height; // Tilfældigt Y-position på canvaset
-    let spawnX;
-
-    // Spawner på venstre eller højre side af canvas
-    if (spawnSide === 'left') {
-        spawnX = -20; // Starter lige udenfor venstre kant
-    } else {
-        spawnX = canvas.width + 20; // Starter lige udenfor højre kant
-    }
-
-    const enemy = new Enemy(spawnX, spawnY, "red", 1); // Opretter en ny fjende
-    enemies.push(enemy); // Lægger fjenden til i enemies array
-}
-
-let spawnInterval = 4000; // Startinterval
-let minimumInterval = 1000;
-let intervalReducer = 250;
-
-let enemySpeed = 1; // Start-hastighed
-
-function spawnEnemy() {
-    const spawnSide = Math.random() < 0.5 ? 'left' : 'right';
-    const spawnY = Math.random() * canvas.height;
-    let spawnX = spawnSide === 'left' ? -20 : canvas.width + 20;
-
-    const enemy = new Enemy(spawnX, spawnY, "red", enemySpeed); // Brug den aktuelle hastighed
-    enemies.push(enemy);
-}
-
-function startEnemySpawner() {
-    setTimeout(function spawn() {
-        spawnEnemy();
-
-        // Reducer interval, men ikke under minimum
-        spawnInterval = Math.max(minimumInterval, spawnInterval - intervalReducer);
-
-        setTimeout(spawn, spawnInterval);
-    }, spawnInterval);
-}
-
+// Funktion til at tjekke for kollision
 function isColliding(rect1, rect2) {
     return (
         rect1.x < rect2.x + rect2.width &&
@@ -248,43 +215,89 @@ function isColliding(rect1, rect2) {
     );
 }
 
+let playerName = ""; // Gemmer spillerens navn
 
-// Game loop funktion, der kører hver frame
+// Starter spillet
+function startGame() {
+    const input = document.getElementById("playerName");
+    playerName = input.value || "Spiller 1";
+
+    document.getElementById("startScreen").style.display = "none";
+    canvas.style.display = "block";
+
+    // Starter først spillet når billeder er klar
+    player1.image.onload = () => {
+        player2.image.onload = () => {
+            gameLoop();
+            startEnemySpawner();
+        };
+    };
+}
+
+// Spawner fjender løbende
+let spawnInterval = 4000;
+let minimumInterval = 1000;
+let intervalReducer = 250;
+let enemySpeed = 1;
+
+function spawnEnemy() {
+    const spawnSide = Math.random() < 0.5 ? 'left' : 'right';
+    const spawnY = Math.random() * canvas.height;
+    let spawnX = spawnSide === 'left' ? -20 : canvas.width + 20;
+
+    const enemy = new Enemy(spawnX, spawnY, "red", enemySpeed);
+    enemies.push(enemy);
+}
+
+function startEnemySpawner() {
+    setTimeout(function spawn() {
+        spawnEnemy();
+        spawnInterval = Math.max(minimumInterval, spawnInterval - intervalReducer);
+        setTimeout(spawn, spawnInterval);
+    }, spawnInterval);
+}
+
+// Selve spil-loopet, som kører hvert frame
 function gameLoop() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Rydder canvaset
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Rydder skærmen
 
-    // Hvis begge spillere er døde, afslut spillet
+    // Hvis begge spillere er døde
     if (player1.lives <= 0 && player2.lives <= 0) {
+        ctx.fillStyle = "black";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "red";
+        ctx.font = "40px Arial";
+        ctx.fillText("GAME OVER", canvas.width / 2 - 120, canvas.height / 2 - 20);
+        ctx.fillStyle = "white";
         ctx.font = "30px Arial";
-        ctx.fillText("Game Over!", canvas.width / 2 - 100, canvas.height / 2);
-        return; // Stopper spillet
+        ctx.fillText("Samlet score: " + score, canvas.width / 2 - 100, canvas.height / 2 + 30);
+        return;
     }
 
-    ctx.fillStyle = "white"
+    // Viser scoren
+    ctx.fillStyle = "white";
     ctx.fillText("Score: " + score, 600, 20);
 
-    // Tegner spillere og opdaterer deres tilstand
+    // Opdater og tegn spillere
     [player1, player2].forEach(p => {
         p.move(keys);
         p.updateBullets();
         p.draw(ctx);
-        p.updateCooldown(); // Opdaterer cooldown for spilleren
+        p.updateCooldown();
     });
 
-    // Tegn livene på et fast sted for begge spillere
-    ctx.fillStyle = "white";
+    // Viser liv tilbage
     ctx.font = "20px Arial";
     ctx.fillText("Player 1 Lives: " + player1.lives, 30, 30);
     ctx.fillText("Player 2 Lives: " + player2.lives, canvas.width - 180, 30);
 
-    // Opdaterer og tegner alle fjender
+    // Opdater og tegn fjender
     enemies.forEach(enemy => {
-        enemy.update(player1, player2); // Fjenden følger den tætteste spiller
-        enemy.draw(ctx); // Tegner fjenden
+        enemy.update(player1, player2);
+        enemy.draw(ctx);
     });
 
-    // Tjek for kollisioner mellem kugler og fjender
+    // Tjek om skud rammer fjender
     enemies.forEach((enemy, enemyIndex) => {
         [player1, player2].forEach(player => {
             player.bullets.forEach((bullet, bulletIndex) => {
@@ -303,22 +316,13 @@ function gameLoop() {
                 };
 
                 if (isColliding(bulletRect, enemyRect)) {
-                    // Fjern fjende og kugle
                     enemies.splice(enemyIndex, 1);
                     player.bullets.splice(bulletIndex, 1);
-                    score += 15; 
+                    score += 15;
                 }
             });
         });
     });
 
-    requestAnimationFrame(gameLoop); // Kører game loop igen
+    requestAnimationFrame(gameLoop); // Kalder sig selv igen
 }
-
-// Start game loop'en og spawner fjender
-player1.image.onload = () => {
-    player2.image.onload = () => {
-        gameLoop(); // Starter game loop'en
-        startEnemySpawner(); //starter enemy spawners tid
-    };
-};

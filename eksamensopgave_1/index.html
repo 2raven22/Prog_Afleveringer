@@ -6,12 +6,20 @@
   <!-- Linker til index.js -->
   <script src="index.js" defer></script>
   <title>Multiplayer Top-Down Shooter</title>
+
   <style>
     canvas {
       background-color: black;
-      border: 2px solid white;
     }
-  </style>
+    
+  </style>  
+    <div id="startScreen">
+      <h1>Velkommen til spillet!</h1>
+      <label for="playerName">Indtast dit navn:</label>
+      <input type="text" id="playerName" placeholder="Spiller 1 navn">
+      <br><br>
+      <button onclick="startGame()">Start spil</button>
+  </div>
 </head>
 <body>
 
