@@ -1,26 +1,34 @@
 // Klasse, der repræsenterer en spiller
 class Player {
     constructor(x, y, imgSrc, controls) {
-        this.x = x; // Spillerens x-position
-        this.y = y; // Spillerens y-position
-        this.width = 40; // Bredde på spilleren
-        this.height = 40; // Højde på spilleren
-        this.controls = controls; // Hvilke taster spilleren bruger
-        this.bullets = []; // Liste over skud affyret af spilleren
-        this.lives = 3; // Start-liv
-        this.hitCooldown = 0; // Tidsperiode hvor spilleren ikke kan tage skade igen
-        this.isDead = false; // Om spilleren er død
-
-        this.image = new Image(); // Opretter billede
-        this.image.src = imgSrc; // Indlæser billede fra fil
+        this.x = x;
+        this.y = y;
+        this.width = 40;
+        this.height = 40;
+        this.controls = controls;
+        this.bullets = [];
+        this.lives = 3;
+        this.hitCooldown = 0;
+        this.isDead = false;
+    
+        this.image = new Image();
+        this.image.onload = () => {
+            console.log("Billedet blev indlæst korrekt:", imgSrc);
+        };
+        this.image.onerror = () => {
+            console.error("Kunne ikke indlæse billede:", imgSrc);
+        };
+        this.image.src = imgSrc;
     }
-
+    
     // Tegner spilleren og deres skud
     draw(ctx) {
-        if (this.isDead) return; // Tegner ikke hvis spilleren er død
+        if (this.isDead) return; // Spilleren er død, så vi tegner ikke
+        console.log("Tegner spiller på position", this.x, this.y); // Debug-linje
         ctx.drawImage(this.image, this.x, this.y, this.width, this.height); // Tegner spillerens billede
-        this.bullets.forEach(b => b.draw(ctx)); // Tegner alle spillerens skud
+        this.bullets.forEach(b => b.draw(ctx)); // Tegner skuddene
     }
+    
 
     // Behandler bevægelse baseret på tastetryk
     move(keys) {
@@ -219,20 +227,17 @@ let playerName = ""; // Gemmer spillerens navn
 
 // Starter spillet
 function startGame() {
+    console.log("Spillet er startet!");
     const input = document.getElementById("playerName");
     playerName = input.value || "Spiller 1";
 
     document.getElementById("startScreen").style.display = "none";
     canvas.style.display = "block";
 
-    // Starter først spillet når billeder er klar
-    player1.image.onload = () => {
-        player2.image.onload = () => {
-            gameLoop();
-            startEnemySpawner();
-        };
-    };
+    gameLoop();           // ← Start med det samme
+    startEnemySpawner();  // ← Og spawn fjender med det samme
 }
+
 
 // Spawner fjender løbende
 let spawnInterval = 4000;
@@ -259,6 +264,7 @@ function startEnemySpawner() {
 
 // Selve spil-loopet, som kører hvert frame
 function gameLoop() {
+    console.log("Game loop kører!");
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Rydder skærmen
 
     // Hvis begge spillere er døde
@@ -288,6 +294,7 @@ function gameLoop() {
 
     // Viser liv tilbage
     ctx.font = "20px Arial";
+    ctx.fillStyle = "white  "
     ctx.fillText("Player 1 Lives: " + player1.lives, 30, 30);
     ctx.fillText("Player 2 Lives: " + player2.lives, canvas.width - 180, 30);
 
