@@ -3,10 +3,13 @@ const mqttClient = mqtt.connect("wss://mqtt.nextservices.dk");
 
 let joystickX = 0;
 let joystickY = 0;
+let joystickX2 = 0;
+let joystickY2 = 0;
 
 mqttClient.on('connect', () => {
     console.log("Connected to MQTT broker");
     mqttClient.subscribe('3xp');
+    mqttClient.subscribe('4xp');
 });
 
 mqttClient.on('message', (topic, message) => {
@@ -15,6 +18,17 @@ mqttClient.on('message', (topic, message) => {
             const data = JSON.parse(message.toString());
             joystickX = data.x;
             joystickY = data.y;
+        } catch (err) {
+            console.error("Error parsing joystick data", err);
+        }
+    }
+});
+mqttClient.on('message', (topic, message) => {
+    if (topic === '4xp') {
+        try {
+            const data = JSON.parse(message.toString());
+            joystickX2 = data.x;
+            joystickY2 = data.y;
         } catch (err) {
             console.error("Error parsing joystick data", err);
         }
@@ -80,6 +94,29 @@ class Player {
 
 
     moveWithJoystick(xVal, yVal) {
+        console.log("Joystick-bevægelse:", xVal, yVal);
+        if (this.isDead) return;
+        const threshold = 0.2; // deadzone
+        const speed = 3;
+    
+        if (yVal >= 0 && yVal <= 105 && this.y - speed >= 0) {
+            this.y -= speed;
+            this.facingDirection = "up";
+        }
+        if (yVal >= 140 && yVal <= 256 && this.y + this.height + speed <= canvas.height) {
+            this.y += speed;
+            this.facingDirection = "down";
+        }
+        if (xVal >= 0 && xVal <= 105 && this.x - speed >= 0) {
+            this.x -= speed;
+            this.facingDirection = "left";
+        }
+        if (xVal >= 140 && xVal <= 256 && this.x + this.width + speed <= canvas.width) {
+            this.x += speed;
+            this.facingDirection = "right";
+        }
+    }
+    moveWithJoystick2(xVal, yVal) {
         console.log("Joystick-bevægelse:", xVal, yVal);
         if (this.isDead) return;
         const threshold = 0.2; // deadzone
@@ -336,7 +373,7 @@ function gameLoop() {
 
     // Opdater og tegn spillere
     player1.moveWithJoystick(joystickX, joystickY);
-    player2.move(keys); // keep player2 on keyboard
+    player2.moveWithJoystick2(joystickX2, joystickY2)
     
     [player1, player2].forEach(p => {
     
