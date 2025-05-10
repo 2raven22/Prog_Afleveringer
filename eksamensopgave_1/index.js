@@ -1,3 +1,27 @@
+// Replace with your actual MQTT broker address
+const mqttClient = mqtt.connect("wss://mqtt.nextservices.dk");
+
+let joystickX = 0;
+let joystickY = 0;
+
+mqttClient.on('connect', () => {
+    console.log("Connected to MQTT broker");
+    mqttClient.subscribe('3xp');
+});
+
+mqttClient.on('message', (topic, message) => {
+    if (topic === '3xp') {
+        try {
+            const data = JSON.parse(message.toString());
+            joystickX = data.x;
+            joystickY = data.y;
+        } catch (err) {
+            console.error("Error parsing joystick data", err);
+        }
+    }
+});
+
+
 // Klasse, der repræsenterer en spiller
 class Player {
     constructor(x, y, imgSrc, controls) {
@@ -53,6 +77,32 @@ class Player {
             this.facingDirection = "right";
         }
     }
+
+
+    moveWithJoystick(xVal, yVal) {
+        console.log("Joystick-bevægelse:", xVal, yVal);
+        if (this.isDead) return;
+        const threshold = 0.2; // deadzone
+        const speed = 3;
+    
+        if (yVal >= 0 && yVal <= 105 && this.y - speed >= 0) {
+            this.y -= speed;
+            this.facingDirection = "up";
+        }
+        if (yVal >= 140 && yVal <= 256 && this.y + this.height + speed <= canvas.height) {
+            this.y += speed;
+            this.facingDirection = "down";
+        }
+        if (xVal >= 0 && xVal <= 105 && this.x - speed >= 0) {
+            this.x -= speed;
+            this.facingDirection = "left";
+        }
+        if (xVal >= 140 && xVal <= 256 && this.x + this.width + speed <= canvas.width) {
+            this.x += speed;
+            this.facingDirection = "right";
+        }
+    }
+    
 
     // Spilleren mister et liv
     loseLife() {
@@ -285,8 +335,11 @@ function gameLoop() {
     ctx.fillText("Score: " + score, 600, 20);
 
     // Opdater og tegn spillere
+    player1.moveWithJoystick(joystickX, joystickY);
+    player2.move(keys); // keep player2 on keyboard
+    
     [player1, player2].forEach(p => {
-        p.move(keys);
+    
         p.updateBullets();
         p.draw(ctx);
         p.updateCooldown();
