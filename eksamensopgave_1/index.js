@@ -5,6 +5,8 @@ let joystickX = 0;
 let joystickY = 0;
 let joystickX2 = 0;
 let joystickY2 = 0;
+let joystickS = 0;
+let joystickS2 = 0;
 
 mqttClient.on('connect', () => {
     console.log("Connected to MQTT broker");
@@ -13,27 +15,21 @@ mqttClient.on('connect', () => {
 });
 
 mqttClient.on('message', (topic, message) => {
-    if (topic === '3xp') {
         try {
             const data = JSON.parse(message.toString());
+            if (topic === '3xp') {
             joystickX = data.x;
             joystickY = data.y;
-        } catch (err) {
-            console.error("Error parsing joystick data", err);
-        }
-    }
-});
-mqttClient.on('message', (topic, message) => {
-    if (topic === '4xp') {
-        try {
-            const data = JSON.parse(message.toString());
+            joystickS = data.space;
+        } else if (topic === '4xp') {
             joystickX2 = data.x;
             joystickY2 = data.y;
+            joystickS2 = data.space
+            }
         } catch (err) {
             console.error("Error parsing joystick data", err);
         }
-    }
-});
+    });
 
 
 // Klasse, der repræsenterer en spiller
@@ -66,32 +62,6 @@ class Player {
         ctx.drawImage(this.image, this.x, this.y, this.width, this.height); // Tegner spillerens billede
         this.bullets.forEach(b => b.draw(ctx)); // Tegner skuddene
     }
-    
-
-    // Behandler bevægelse baseret på tastetryk
-    move(keys) {
-        if (this.isDead) return; // Døde spillere bevæger sig ikke
-        const speed = 3; // Hastighed
-
-        // Flytter op/ned/venstre/højre afhængigt af tast
-        if (keys[this.controls.up] && this.y - speed >= 0) {
-            this.y -= speed;
-            this.facingDirection = "up";
-        }
-        if (keys[this.controls.down] && this.y + this.height + speed <= canvas.height) {
-            this.y += speed;
-            this.facingDirection = "down";
-        }
-        if (keys[this.controls.left] && this.x - speed >= 0) {
-            this.x -= speed;
-            this.facingDirection = "left";
-        }
-        if (keys[this.controls.right] && this.x + this.width + speed <= canvas.width) {
-            this.x += speed;
-            this.facingDirection = "right";
-        }
-    }
-
 
     moveWithJoystick(xVal, yVal) {
         console.log("Joystick-bevægelse:", xVal, yVal);
@@ -117,7 +87,7 @@ class Player {
         }
     }
     moveWithJoystick2(xVal, yVal) {
-        console.log("Joystick-bevægelse:", xVal, yVal);
+        console.log("Joystick-bevægelse2:", xVal, yVal);
         if (this.isDead) return;
         const threshold = 0.2; // deadzone
         const speed = 3;
@@ -140,6 +110,16 @@ class Player {
         }
     }
     
+    joytickShoot(){
+        if(joystickS == 1){
+            player1.shoot();
+        }
+    }
+    joytickShoot2(){
+        if(joystickS2 == 1){
+            player2.shoot();
+        }
+    }   
 
     // Spilleren mister et liv
     loseLife() {
@@ -278,15 +258,6 @@ const ctx = canvas.getContext("2d");
 let keys = {}; // Taster der bliver holdt nede
 let score = 0; // Spillets score
 
-// Registrerer tastetryk
-document.addEventListener("keydown", e => {
-    keys[e.key] = true;
-    if (e.key === ' ') player1.shoot(); // Player1 skyder med mellemrum
-    if (e.key === 'Enter') player2.shoot(); // Player2 skyder med enter
-});
-document.addEventListener("keyup", e => {
-    keys[e.key] = false;
-});
 
 // Opretter to spillere
 const player1 = new Player(100, 350, "assets/ak.png", {
@@ -373,14 +344,20 @@ function gameLoop() {
 
     // Opdater og tegn spillere
     player1.moveWithJoystick(joystickX, joystickY);
-    player2.moveWithJoystick2(joystickX2, joystickY2)
+    player2.moveWithJoystick2(joystickX2, joystickY2);
+    player1.joytickShoot(joystickS);
+    player1.joytickShoot2(joystickS2);
     
-    [player1, player2].forEach(p => {
     
-        p.updateBullets();
-        p.draw(ctx);
-        p.updateCooldown();
-    });
+    
+        player1.updateBullets();
+        player1.draw(ctx);
+        player1.updateCooldown();
+  
+        player2.updateBullets();
+        player2.draw(ctx);
+        player2.updateCooldown();
+  
 
     // Viser liv tilbage
     ctx.font = "20px Arial";
